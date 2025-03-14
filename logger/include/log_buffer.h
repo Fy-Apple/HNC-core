@@ -14,6 +14,7 @@ namespace hnc::core::logger::details{
  * - 支持 `std::shared_mutex` 读写锁
  * - 满了后需要外部进行缓冲区交换
  */
+
 class LogBuffer{
 public:
     LogBuffer();

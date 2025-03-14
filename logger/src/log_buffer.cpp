@@ -4,6 +4,7 @@
 
 namespace hnc::core::logger::details {
 
+
 LogBuffer::LogBuffer() : m_index_(0) {
 
 }

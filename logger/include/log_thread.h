@@ -6,6 +6,7 @@
 #include <latch>
 #include <functional>
 
+
 namespace hnc::core::logger::details {
 // 前向声明
 class LogBuffer;

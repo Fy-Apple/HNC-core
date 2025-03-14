@@ -8,6 +8,7 @@
 /**
 * 全局 Logger 接口
 */
+
 namespace hnc::core::logger {
 // 定义遍历日志等级宏， 后续修改日志等级只需要修改这个宏即可
 #define _FOREACH_LOG_LEVEL(f) \

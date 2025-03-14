@@ -5,6 +5,7 @@
 
 #include "log_thread.h"
 
+
 namespace hnc::core::logger::details {
 class Logger{
 public:

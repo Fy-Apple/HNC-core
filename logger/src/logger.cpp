@@ -7,6 +7,7 @@
 namespace hnc::core::logger::details {
 
 
+
 Logger::Logger() {
     m_log_thread_.start();
 }

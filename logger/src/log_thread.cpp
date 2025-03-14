@@ -13,6 +13,7 @@
 
 namespace hnc::core::logger::details {
 
+
 LogThread::LogThread()
     : m_running_(false)
     , m_primary_buffer_(&buffers[0])
