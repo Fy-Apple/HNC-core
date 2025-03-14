@@ -15,7 +15,7 @@ tcmalloc 在多线程环境下效率要高于glibc的malloc
 ## 定长内存池实现
 
 ---
-> ......
+> .....
 
 
 ## tcmalloc框架
