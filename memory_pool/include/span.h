@@ -2,6 +2,8 @@
 
 #include <mutex>
 
+#include "hnc_log.h"
+
 namespace hnc::core::mem_pool::details {
 /** 双向链表节点类型Span,内部管理多个Page(OS Page,8KB) */
 struct Span {
@@ -24,12 +26,16 @@ class SpanList {
 public:
     SpanList() {
         // 初始化头节点
-        _m_header = new Span();
+        /**
+         * 此处 三个单例还没有初始化！  尝试调用会错误， 所以头节点不能是指针
+         */
+        // _m_header = new Span();
+        _m_header =  &_m_header_span;
         _m_header->_prev = _m_header->_next = _m_header;
     }
     ~SpanList() {
         /** 注意， 其他span不需要删除，全部由pc管理，只删除自己申请的header头节点 */
-        delete _m_header;
+        //delete _m_header;
     }
     class Iterator {
     public:
@@ -78,6 +84,7 @@ public:
         span->_prev = pos->_prev;
         span->_next = pos;
         pos->_prev = span;
+        logger::log_trace("insert span, page_size=" + std::to_string(span->_page_size));
     }
     // 删除一个Span节点
     void erase(const Span* span) const noexcept {
@@ -86,10 +93,9 @@ public:
 
         span->_prev->_next = span->_next;
         span->_next->_prev = span->_prev;
-        // pos指向的span节点不需要删除， 而是进行回收
+        // pos指向的span节点不需要删除， 而是进行回收, 由pc统一回收
 
-        // 回收该span
-
+        logger::log_trace("erase span, page_size=" + std::to_string(span->_page_size));
     }
 
     Span* pop_front() const noexcept {
@@ -113,6 +119,7 @@ public:
     }
 private:
     Span* _m_header;
+    Span _m_header_span;
     std::mutex _m_mtx;
 };
 }

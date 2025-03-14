@@ -1,32 +1,7 @@
 #include "page_cache.h"
 
-#include <cstdlib>
-#ifdef _WIN32
-#include <Windows.h> // windows下申请内存的头文件
-#else
-#include <sys/mman.h>
-#endif
-
 namespace hnc::core::mem_pool::details {
 PageCache PageCache::_m_page_cache; // _m_page_cache的全局饿汉单例
-
-void* SystemMalloc(const size_t page_count) {
-#ifdef _WIN32
-    void* mem_ptr = VirtualAlloc(0, page_count << PAGE_SHIFT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-    // 由OS决定从哪里分配， 读写， 不影响其他进程， 不与文件关联
-    void* mem_ptr = mmap(nullptr, page_count << constant::PAGE_SHIFT, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-    if (mem_ptr == nullptr) {
-        throw std::bad_alloc();
-    }
-    return mem_ptr;
-}
-
-void SystemFree(void* ptr, const size_t page_count) {
-    munmap(ptr,page_count << constant::PAGE_SHIFT);
-}
-
 
 /** 将page_count数量的span 返回给central_cache
  *  1. 先检查自己对应的哈希桶中是否有空闲的span，有则返回
@@ -35,9 +10,12 @@ void SystemFree(void* ptr, const size_t page_count) {
  */
 Span * PageCache::create_pc_span(const size_t page_count) noexcept {
     assert(page_count > 0);
-    // 超过1024KB的申请，即超过128Page增加新的逻辑，这里的默认Page为8KB
+    // <=256KB的会走thread_local
+    // 256 ~ 512 会走 pc
+    // >= 512 直接走系统的mmap给
+    // 超过512KB的申请，即超过128Page增加新的逻辑，这里的默认Page为4KB
     if (page_count > constant::MAX_PAGE_COUNT) {
-        auto ptr = SystemMalloc(page_count);
+        auto ptr = SystemAlloc(page_count);
         const auto span = _m_span_pool.New();
 
         span->_page_id = reinterpret_cast<size_t>(ptr) >> constant::PAGE_SHIFT;
@@ -45,6 +23,7 @@ Span * PageCache::create_pc_span(const size_t page_count) noexcept {
         span->_block_size = constant::MAX_ALLOC_BYTES + 1;
         _m_page_span_map[span->_page_id] = span;
         _m_page_span_map[span->_page_id + span->_page_size - 1] = span;
+        logger::log_debug("page cache {big block} -> os , page_count=" + std::to_string(page_count));
         return span;
     }
     // 1B ~ 256KB ~ 1024KB 即1Page ~ 32page ~ 128Page，
@@ -58,6 +37,7 @@ Span * PageCache::create_pc_span(const size_t page_count) noexcept {
         for (size_t i = 0; i < span->_page_size; ++i) {
             _m_page_span_map[span->_page_id + i] = span;
         }
+        logger::log_debug("thread cache {empty} -> central cache {empty} -> page cache {not empty}, page_count=" + std::to_string(page_count));
         return span;
     }
 
@@ -84,22 +64,29 @@ Span * PageCache::create_pc_span(const size_t page_count) noexcept {
             // 申请的list_index 是0， 那么会跳过当前for，申请一个128页的span，一定会到这里分割
             // 变成1page的span和127page的span， 那么这个分割后的page_span只需要记录两端页号即可
             // 下次再来一个新的，也只会走这里，
+
+            // TODO: 替换 `_m_page_span_map` 为基数树（Radix Tree），避免 `unordered_map` 触发 operator new 递归 死锁
+            //  `std::unordered_map` 在插入新元素或 rehash 时，会调用 `operator new` 分配新内存。
+            //  如果全局 `operator new` 被重载，它可能会 递归调用 unordered_map.insert()，导致 卡死在这里
+            //  解决方案：用 基数树（Radix Tree） 代替 `unordered_map`，避免 `operator new` 的干扰。
+
             _m_page_span_map[complete_span->_page_id] = complete_span;
             _m_page_span_map[complete_span->_page_id + complete_span->_page_size - 1] = complete_span;
-
+            // std::cout << 'update\n';
 
             // 更新分配出去的span和页号的哈希
             for (size_t j = 0; j < prev_span->_page_size; ++j) {
                 _m_page_span_map[prev_span->_page_id + j] = prev_span;
             }
+            logger::log_debug("thread cache {empty} -> central cache {empty} -> page cache {not empty}, split=" + std::to_string(page_count)  + ", " + std::to_string(i + 1));
             return prev_span;
         }
     }
 
 
     // 3. 若所有哈希桶中均没有空闲span，则向OS申请一篇足够大的span分割后挂载到对应list中返回
-    void* mem_ptr = SystemMalloc(constant::MAX_PAGE_COUNT);
-
+    void* mem_ptr = SystemAlloc(constant::MAX_PAGE_COUNT);
+    logger::log_debug("thread cache {empty} -> central cache {empty} -> page cache {empty} -> os {span(128 page)}");
 
     // 动态申请一个新的span，
     auto *span = _m_span_pool.New();
@@ -130,11 +117,11 @@ void PageCache::recover_span_to_page_cache(Span *span) noexcept {
 
     // 超过128页面的span直接归还OS
     if (span->_page_size > constant::MAX_PAGE_COUNT) {
-        SystemFree(reinterpret_cast<void*>(span->_page_id << constant::PAGE_SHIFT), span->_page_size);
+        SystemFreeMMap(reinterpret_cast<void*>(span->_page_id << constant::PAGE_SHIFT), span->_page_size);
         // 从定长内存池中删除span(归还定长内存池)
 
         _m_span_pool.Delete(span);
-
+        logger::log_debug("free to pc(os) ,page_size=" + std::to_string(span->_page_size));
         return;
     }
 
@@ -161,6 +148,7 @@ void PageCache::recover_span_to_page_cache(Span *span) noexcept {
 
         // 因为span是new出来的所以需要显式delete, 从定长内存池中删除(归还定长内存池)
         _m_span_pool.Delete(left_span);
+        logger::log_debug("free to pc ,left merge=" + std::to_string(span->_page_size));
     }
     // 合并右侧span， 相同逻辑
     while (true) {
@@ -177,6 +165,7 @@ void PageCache::recover_span_to_page_cache(Span *span) noexcept {
         _m_span_lists[right_span->_page_size - 1].erase(right_span);
         // 因为span是new出来的所以需要显式delete, 从定长内存池中删除(归还定长内存池)
         _m_span_pool.Delete(right_span);
+        logger::log_debug("free to pc ,right merge=" + std::to_string(span->_page_size));
     }
 
     // 合并完成后， 将当前span挂载到对应的哈希桶中
@@ -186,6 +175,7 @@ void PageCache::recover_span_to_page_cache(Span *span) noexcept {
     // 将当前span的两端页面映射到哈希表上，以供下次合并使用
     _m_page_span_map[span->_page_id] = span;
     _m_page_span_map[span->_page_id + span->_page_size - 1] = span;
+    logger::log_debug("free to pc ,span page_size=" + std::to_string(span->_page_size));
 
 }
 }

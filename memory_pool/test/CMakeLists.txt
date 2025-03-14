@@ -1,11 +1,15 @@
-
-# 设置源文件
-set(SOURCES
-        main.cpp
+set(TEST_POOL_SOURCES
+        test_pool.cpp
 )
 
-# 生成静态库
-add_executable(mp_test ${SOURCES})
+add_executable(mp_test ${TEST_POOL_SOURCES})
 
-# 如果有外部依赖库的话（比如pthread）
-target_link_libraries(mp_test PUBLIC core)
+target_link_libraries(mp_test PUBLIC core pthread)
+
+set(BENCHMARK_SOURCES
+        benchmark.cpp
+)
+
+add_executable(mp_benchmark ${BENCHMARK_SOURCES})
+
+target_link_libraries(mp_benchmark PUBLIC core pthread)

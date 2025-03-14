@@ -1,20 +1,78 @@
 #pragma once
 #include <cassert>
 #include <cstddef>
+#include <new>
+
+#ifdef _WIN32
+#include<Windows.h>
+#else
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#endif
+
+#include <cstdlib>
+
+
 
 namespace hnc::core::mem_pool {
+
+// TODO : 后续需要将可配置参数全部移入 配置文件读取 实例
 namespace details::constant {
+/**
+ * 默认按照一个页面4K 256 * 4K = 1M， 默认一个块256KB， 即最大span已经 = 4个块了，足矣
+ */
 inline constexpr int FREE_LIST_SIZE = 208; // 一共可以对应208个自由链表
 inline constexpr int MAX_ALLOC_BYTES = 256 * 1024; // 一次可分配最大内存块 256KB
 inline constexpr int MAX_PAGE_COUNT = 128; // PageCache中的一个span最多可以包含的页面数
 inline constexpr int PAGE_SHIFT = 12; // 2^12 = 4096, 一页4KB
 
-/**
- * 默认按照一个页面4K 256 * 4K = 1M， 默认一个块256KB， 即最大span已经 = 4个块了，足矣
- */
 }
 
 namespace details {
+/**
+ * 超过128个page的内存块， 直接由MMAP系统调用去映射，  使用匿名 anonymous   文件描述符设为-1即不映射文件
+*/
+inline void* SystemAllocMMap(const size_t page_count) {
+#ifdef _WIN32
+    void* mem_ptr = VirtualAlloc(0, page_count << PAGE_SHIFT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    // 由OS决定从哪里分配， 读写， 不影响其他进程， 不与文件关联
+    void* mem_ptr = mmap(nullptr, page_count << constant::PAGE_SHIFT, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+    if (mem_ptr == nullptr) {
+        throw std::bad_alloc();
+    }
+    return mem_ptr;
+}
+/**
+ * 用于释放由mmap申请的大块内存块 （ > 512 KB 的内存块）
+*/
+inline void SystemFreeMMap(void* ptr, const size_t page_count) {
+    munmap(ptr,page_count << constant::PAGE_SHIFT);
+}
+
+
+inline void* SystemAlloc(const size_t page_count)
+{
+    if (page_count > constant::MAX_PAGE_COUNT) {
+        return SystemAllocMMap(page_count);
+    }
+#ifdef _WIN32
+    void* ptr = VirtualAlloc(0, page_count << constant::PAGE_SHIFT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+    // 使用brk系统调用调整进程堆尾指针来扩展堆内存
+    void *ptr = sbrk(0);
+    if (brk((sbrk(0) + (page_count << constant::PAGE_SHIFT))) == -1) {
+        perror("brk failed");
+        ptr = nullptr;
+    }
+#endif
+    if (ptr == nullptr)
+        throw std::bad_alloc();
+    return ptr;
+}
+
 inline size_t _RoundUp(const size_t size, const size_t alignment) noexcept {
     return (size + alignment - 1) & ~ (alignment - 1);
 }

@@ -79,6 +79,8 @@ void CentralCache::recover_blocks_to_spans(void *start, const size_t align_size)
 
         // 当一个span的内存块使用数量归为0时说明这个span的所有内存块都归还， 则将其归还给pc 进行合并
         --span->_use_count;
+
+
         if (span->_use_count == 0) {
             // 将这块完整的Span 归还给PageCache
             _m_span_lists[list_index].erase(span);
@@ -116,6 +118,7 @@ Span * CentralCache::_m_get_span(SpanList &span_list, const size_t align_size) n
     // ① 遍历所有span查找是否有不为空的freelist，找到即返回该span中的
     for (auto it = span_list.begin(); it != span_list.end(); ++it) {
         if (it->_freelist_header != nullptr) {
+            logger::log_debug("thread cache {empty} -> central cache {not empty}, block_size=" + std::to_string(align_size));
             return *it;
         }
     }
@@ -131,6 +134,7 @@ Span * CentralCache::_m_get_span(SpanList &span_list, const size_t align_size) n
     PageCache::GetInstance().lock();
     // 从pc中获取一个全新的span 包含了page_count 个页面
     Span *span = PageCache::GetInstance().create_pc_span(page_count);
+    logger::log_debug("thread cache {empty} -> central cache {add new span} page_count=" + std::to_string(span->_page_size));
     // 这里还没有释放互斥锁，对于pc的操作是只有一个线程会执行的，因此只要在这一处修改为true即可
     span->_is_use = true;
     span->_block_size = align_size; // 内存块大小
@@ -162,7 +166,6 @@ Span * CentralCache::_m_get_span(SpanList &span_list, const size_t align_size) n
     span_list.lock();
     // 将该链表放入对应的span_list中
     span_list.insert(*span_list.begin(), span);
-
     return span;
 }
 

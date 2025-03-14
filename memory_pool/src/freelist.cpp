@@ -1,6 +1,9 @@
 #include "freelist.h"
 
 #include <assert.h>
+
+#include "hnc_log.h"
+
 namespace hnc::core::mem_pool::details {
 bool Freelist::empty() const noexcept {
     return _m_freelist_header == nullptr;
@@ -13,6 +16,7 @@ size_t Freelist::apply_count() const noexcept {
 void Freelist::increment() noexcept {
     // 下次申请的内存块数量
     ++_m_apply_count;
+    logger::log_trace("apply_count=" + std::to_string(_m_apply_count));
 }
 
 size_t Freelist::size() const noexcept {
@@ -25,6 +29,7 @@ void Freelist::push_front(void* obj) noexcept {
     _m_freelist_header = obj;
     // 内存块+1
     ++_m_size;
+    logger::log_trace("add block=1, size=" + std::to_string(_m_size));
 }
 
 void Freelist::push_range(void *start, void *end, const size_t size) noexcept {
@@ -32,6 +37,7 @@ void Freelist::push_range(void *start, void *end, const size_t size) noexcept {
     GetNextAddr(end) = _m_freelist_header;
     _m_freelist_header = start;
     _m_size += size;
+    logger::log_trace("adds block=" + std::to_string(size) + ", size = " + std::to_string(_m_size));
 }
 /**
  * 将头部的block_count个内存块回收
@@ -50,6 +56,7 @@ void Freelist::pop_range(void *&start, void *&end, size_t block_count) noexcept 
     // 新起始地址即最后一个内存块内的地址
     _m_freelist_header = GetNextAddr(end);
     GetNextAddr(end) = nullptr;
+    logger::log_trace("recycle block=" + std::to_string(block_count) + ", size = " + std::to_string(_m_size));
 }
 
 void* Freelist::pop_front() noexcept {
@@ -58,6 +65,7 @@ void* Freelist::pop_front() noexcept {
     _m_freelist_header = GetNextAddr(obj);
     // 内存块-1
     --_m_size;
+    logger::log_trace("recycle block=1, size = " + std::to_string(_m_size));
     return obj;
 }
 }

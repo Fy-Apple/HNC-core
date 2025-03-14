@@ -3,30 +3,8 @@
 #include "common.h"
 #include <freelist.h>
 
-#ifdef _WIN32
-#include<Windows.h>
-#else
-#include <unistd.h>
-#include <stdio.h>
-#endif
 
 namespace hnc::core::mem_pool::details {
-inline void* SystemAlloc(const size_t page_count)
-{
-#ifdef _WIN32
-    void* ptr = VirtualAlloc(0, page_count << constant::PAGE_SHIFT, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-    // 使用brk系统调用调整进程堆尾指针来扩展堆内存
-    void *ptr = sbrk(0);
-    if (brk((sbrk(0) + (page_count << constant::PAGE_SHIFT))) == -1) {
-        perror("brk failed");
-        ptr = nullptr;
-    }
-#endif
-    if (ptr == nullptr)
-        throw std::bad_alloc();
-    return ptr;
-}
 
 // 内存池， 对象size固定
 template<class T>
