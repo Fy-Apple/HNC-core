@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <source_location>
 #include <shared_mutex>
 
 #include "log_thread.h"
