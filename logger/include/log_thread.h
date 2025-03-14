@@ -25,7 +25,6 @@ public:
 
     void start();
 
-    void stop();
     // 通知后台线程交换缓冲区并将日志写入文件
     void notify() const noexcept;
 
