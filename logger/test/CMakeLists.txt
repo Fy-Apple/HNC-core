@@ -11,6 +11,7 @@ set(BENCHMARK_SOURCES
         benchmark.cpp
 )
 
+
 add_executable(log_benchmark ${BENCHMARK_SOURCES})
 
 target_link_libraries(log_benchmark PUBLIC core)

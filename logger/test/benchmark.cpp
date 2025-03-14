@@ -13,6 +13,7 @@ using namespace hnc::core::logger;
 void test_log_mt_performance() {
     constexpr int LOG_COUNT = 10000;
     constexpr int THREAD_COUNT = 16;
+
     std::cout << "=== multi thread performance test ===" << std::endl;
     std::vector<std::thread> threads;
     std::latch lch(THREAD_COUNT + 1);

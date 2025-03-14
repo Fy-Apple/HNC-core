@@ -8,6 +8,7 @@
 
 using namespace hnc::core::logger;
 
+
 void test_log_st() {
     std::cout << "=== single thread log test ===" << std::endl;
     log_info("info log bala bala");
