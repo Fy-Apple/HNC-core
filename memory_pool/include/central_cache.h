@@ -18,7 +18,6 @@ public:
     // tc释放的一系列内存块返还给spans (可能是从属于多个span的)
     void recover_blocks_to_spans(void* start, size_t align_size) noexcept;
 
-
 private:
     CentralCache() = default;
     ~CentralCache() = default;

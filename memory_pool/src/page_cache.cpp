@@ -83,7 +83,6 @@ Span * PageCache::create_pc_span(const size_t page_count) noexcept {
         }
     }
 
-
     // 3. 若所有哈希桶中均没有空闲span，则向OS申请一篇足够大的span分割后挂载到对应list中返回
     void* mem_ptr = SystemAlloc(constant::MAX_PAGE_COUNT);
     logger::log_debug("thread cache {empty} -> central cache {empty} -> page cache {empty} -> os {span(128 page)}");

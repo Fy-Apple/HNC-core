@@ -122,4 +122,5 @@ private:
     Span _m_header_span;
     std::mutex _m_mtx;
 };
+
 }

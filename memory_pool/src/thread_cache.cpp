@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cassert>
 
-
 namespace hnc::core::mem_pool::details {
 
 void* ThreadCache::allocate(const size_t size) noexcept{

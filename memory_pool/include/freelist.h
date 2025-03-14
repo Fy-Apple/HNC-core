@@ -2,7 +2,6 @@
 
 #include <cstddef>
 
-
 // 自由链表 管理多个定长内存块
 namespace hnc::core::mem_pool::details {
 

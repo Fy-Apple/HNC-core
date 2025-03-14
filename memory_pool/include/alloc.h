@@ -8,6 +8,7 @@
 #include <assert.h>
 
 namespace hnc::core::mem_pool {
+
 /**
  *  全局申请内存接口
  */

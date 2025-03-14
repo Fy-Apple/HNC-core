@@ -3,6 +3,7 @@
 
 #include <freelist.h>
 
+
 namespace hnc::core::mem_pool::details{
 CentralCache CentralCache::_m_central_cache; // central_cache的饿汉单例
 

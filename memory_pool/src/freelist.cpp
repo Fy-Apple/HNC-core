@@ -19,6 +19,7 @@ void Freelist::increment() noexcept {
     logger::log_trace("apply_count=" + std::to_string(_m_apply_count));
 }
 
+
 size_t Freelist::size() const noexcept {
     return _m_size;
 }

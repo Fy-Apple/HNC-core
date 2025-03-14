@@ -3,7 +3,6 @@
 #include "common.h"
 #include <freelist.h>
 
-
 namespace hnc::core::mem_pool::details {
 
 // 内存池， 对象size固定
