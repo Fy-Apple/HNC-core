@@ -1,96 +1,76 @@
-#include "timer_task.h"
-#include <iostream>
-#include <sys/epoll.h>
-#include <unordered_map>
-#include <vector>
-#include <thread>
-#include <atomic>
-#include <sys/timerfd.h>
+#include "hnc_timer_manager.h"
 
-class TimerManager {
-public:
-    TimerManager() : epoll_fd_(epoll_create1(0)), running_(true) {
-        if (epoll_fd_ == -1) {
-            throw std::runtime_error("Failed to create epoll");
-        }
-        worker_thread_ = std::thread([this]() { event_loop(); });
+#include <hnc_timer_d.h>
+#include <unistd.h>
+
+namespace hnc::core::timer::details {
+
+/**
+* @brief 创建一个定时器管理者类， 需要指定后台定时器线程数量
+*/
+HncTimerManager::HncTimerManager() {
+
+}
+
+
+
+
+HncTimerManager::~HncTimerManager() {
+    // 需要等待 成员变量退出后才能析构，因为成员变量持有自己的指针
+    // stop 方法会阻塞， 等待 后台定时器线程正常退出后采取析构自己， 随后析构 timer thread
+    m_timer_thread_.stop();
+}
+
+/**
+     * @brief 由于本实例再 构造函数时未初始化this， 需要把this指针传给 timer thread， 所以需要额外辅助函数而不能再构造方法中初始化
+     */
+void HncTimerManager::start(const uint8_t threads) noexcept {
+    // 后台线程初始化
+    m_timer_thread_.init(threads, this);
+    logger::log_debug("HncTimerManager start!");
+}
+
+
+/**
+ * @brief 生产者线程提交新的定时任务
+ */
+int HncTimerManager::add_timer(const std::chrono::seconds duration, std::function<void()> callback, const bool repeat) {
+    // 创建一个新的定时器， 内部会调用timer fd create
+    auto timer_ptr = std::make_shared<HncTimer>(duration, std::move(callback), repeat);
+    int timer_fd = timer_ptr->get_fd();
+
+    // map是非线程安全的，所以这里要加锁，可能有多线程在操作
+    std::lock_guard<std::mutex> lock(m_mtx_);
+    m_timers_.emplace(timer_fd, timer_ptr);
+    // 通知 后台线程 监听该定时器
+    m_timer_thread_.add_timer(timer_fd);
+    return timer_fd;
+}
+
+/**
+ * @brief 从epoll中删除一个定时器任务
+ */
+void HncTimerManager::remove_timer(const int timer_fd) {
+
+    std::lock_guard<std::mutex> lock(m_mtx_);
+    m_timers_.erase(timer_fd);
+    logger::log_debug("remove timer_fd = " + std::to_string(timer_fd));
+    std::cout << "remove fd" << timer_fd << std::endl;
+    // 通知 后台线程 删除该定时器, 不需要加锁，因为epoll_ctl 是线程安全的
+    m_timer_thread_.remove_timer(timer_fd);
+}
+
+/**
+ * @brief 执行对应定时器对应的回调
+ */
+void HncTimerManager::callback(const int timer_fd) noexcept{
+    std::shared_ptr<HncTimer> timer_ptr;
+    {
+        std::lock_guard<std::mutex> lock(m_mtx_);
+        timer_ptr = m_timers_[timer_fd];
     }
+    if (timer_ptr) timer_ptr->callback();
+}
 
-    ~TimerManager() {
-        running_ = false;
-        close(epoll_fd_);
-        if (worker_thread_.joinable()) worker_thread_.join();
-    }
 
-    int add_timer(std::chrono::milliseconds duration, std::function<void()> callback, bool repeat = false) {
-        int timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-        if (timer_fd == -1) {
-            throw std::runtime_error("Failed to create timerfd");
-        }
-
-        struct itimerspec new_value{};
-        new_value.it_value.tv_sec = duration.count() / 1000;
-        new_value.it_value.tv_nsec = (duration.count() % 1000) * 1000000;
-        if (repeat) {
-            new_value.it_interval = new_value.it_value; // 设置周期性定时器
-        }
-        timerfd_settime(timer_fd, 0, &new_value, nullptr);
-
-        epoll_event event{};
-        event.events = EPOLLIN;
-        event.data.fd = timer_fd;
-        epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, timer_fd, &event);
-
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            tasks_.emplace(timer_fd, HncTimerTask(std::move(callback), repeat));
-        }
-
-        return timer_fd;
-    }
-
-    void remove_timer(int timer_fd) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (tasks_.count(timer_fd)) {
-            close(timer_fd);
-            epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, timer_fd, nullptr);
-            tasks_.erase(timer_fd);
-        }
-    }
-
-private:
-    void event_loop() {
-        epoll_event events[10];
-        while (running_) {
-            int n = epoll_wait(epoll_fd_, events, 10, 1000);
-            for (int i = 0; i < n; ++i) {
-                int timer_fd = events[i].data.fd;
-                uint64_t expirations;
-                read(timer_fd, &expirations, sizeof(expirations));  // 清除触发标记
-
-                std::function<void()> task;
-                bool repeat = false;
-
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    if (tasks_.contains(timer_fd)) {
-                        task = [&] { tasks_[timer_fd].execute(); };
-                        repeat = tasks_[timer_fd].is_repeating();
-                    }
-                }
-
-                if (task) task();
-
-                if (!repeat) {
-                    remove_timer(timer_fd);
-                }
-            }
-        }
-    }
-
-    int epoll_fd_;
-    std::unordered_map<int, HncTimerTask> tasks_;
-    std::mutex mutex_;
-    std::thread worker_thread_;
-    std::atomic<bool> running_;
-};
+}  // namespace hnc::core::timer::details

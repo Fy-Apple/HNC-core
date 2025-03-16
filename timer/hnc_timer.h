@@ -1,8 +1,8 @@
-//
-// Created by vorange on 3/16/25.
-//
+#pragma once
 
-#ifndef HNC_TIMER_H
-#define HNC_TIMER_H
+#include "hnc_timer_manager.h"
 
-#endif //HNC_TIMER_H
+
+namespace hnc::core::timer::details {
+
+}
