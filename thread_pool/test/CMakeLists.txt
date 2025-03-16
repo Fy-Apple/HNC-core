@@ -8,4 +8,4 @@ set(SOURCES
 add_executable(tp_test ${SOURCES})
 
 # 如果有外部依赖库的话
-target_link_libraries(tp_test PUBLIC core)
+target_link_libraries(tp_test PUBLIC hnc_core)

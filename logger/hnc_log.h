@@ -110,4 +110,8 @@ inline void log_message(const Level level, const std::string& msg, const std::so
 #undef _FUNCTION
 
 #undef _FOREACH_LOG_LEVEL
+
+inline void change_log_file_name(const std::string &name) {
+    details::constant::LOG_FILE_NAME = name;
+}
 }

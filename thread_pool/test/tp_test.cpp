@@ -3,7 +3,8 @@
 #include <vector>
 #include <chrono>
 #include "hnc_thread_pool.h"
-
+using namespace hnc::core::logger;
+using namespace hnc::core::thread_pool;
 
 /**
  * @brief 一个具体任务，继承 Task<MyTask>
@@ -28,8 +29,9 @@ int sum_task(const int a, const int b) {
 }
 
 void test_fixed_pool() {
+
     std::cout << "======== [Test 1] Fixed 线程池 ========\n";
-    const auto poolA = hnc::core::thread_pool::ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)", 1);
+    const auto poolA = ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)", 1);
 
     poolA->submit_task(simple_task, 1);
     poolA->submit_task(simple_task, 1);
@@ -44,7 +46,7 @@ void test_fixed_pool() {
 
 void test_cached_pool() {
     std::cout << "======== [Test 2] Cached 线程池 ========\n";
-    auto cachedPoolX = hnc::core::thread_pool::ThreadPoolManager::get_cached_pool("CacheX", 5);
+    auto cachedPoolX = ThreadPoolManager::get_cached_pool("CacheX", 5);
 
     for (int i = 0; i < 10; ++i) {
         cachedPoolX->submit_task(simple_task, i);
@@ -62,7 +64,7 @@ void test_cached_pool() {
 
 void test_fixed_performance() {
     std::cout << "======== [Test 3] Fixed 100 task ========\n";
-    const auto poolA = hnc::core::thread_pool::ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)");
+    const auto poolA = ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)");
     for (int i = 0; i < 100; ++i) {
         const auto success = poolA->submit_task(simple_task, i);
         if (!success.valid()) {
@@ -75,7 +77,7 @@ void test_fixed_performance() {
 
 void test_cached_performance() {
     std::cout << "======== [Test 4] Cached 100 task ========\n";
-    const auto CacheX = hnc::core::thread_pool::ThreadPoolManager::get_cached_pool("CacheX");
+    const auto CacheX = ThreadPoolManager::get_cached_pool("CacheX");
     for (int i = 0; i < 100; ++i) {
         const auto success = CacheX->submit_task(simple_task, i);
         if (!success.valid()) {
@@ -90,7 +92,7 @@ void test_obj_task() {
     std::cout << "======== [Test 5] task obj ========\n";
     MyTask task1;
     MyTask task2;
-    const auto pool = hnc::core::thread_pool::ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)", 1);
+    const auto pool = ThreadPoolManager::get_fixed_pool("Fixed_Pool(4)", 1);
 
     pool->submit_task(task1);
     pool->submit_task(task2);
@@ -100,6 +102,8 @@ void test_obj_task() {
 
 
 int main() {
+    change_log_file_name("thread_pool/benchmark");
+
     test_fixed_pool();
     test_cached_pool();
     test_fixed_performance();

@@ -1,12 +1,12 @@
-# 头文件
-#include_directories(logger)
-#include_directories(logger/include)
-#include_directories(memory_pool)
-#include_directories(memory_pool/include)
-#include_directories(thread_pool)
-#include_directories(thread_pool/include)
-#include_directories(thread_pool)
-#include_directories(thread_pool/include)
+# 设置头文件搜索路径
+include_directories(src/core/logger)
+include_directories(src/core/logger/include)
+include_directories(src/core/memory_pool)
+include_directories(src/core/memory_pool/include)
+include_directories(src/core/thread_pool)
+include_directories(src/core/thread_pool/include)
+include_directories(src/core/timer)
+include_directories(src/core/timer/include)
 
 # 设置源文件
 set(SOURCES
@@ -28,10 +28,10 @@ set(SOURCES
 )
 
 # 生成静态库
-add_library(core STATIC ${SOURCES})
+add_library(hnc_core STATIC ${SOURCES})
 
 # 如果有外部依赖库的话（比如pthread）
-target_link_libraries(core PUBLIC pthread)
+target_link_libraries(hnc_core PUBLIC pthread)
 
 
 add_subdirectory(logger/test)

@@ -5,7 +5,7 @@ set(TEST_LOGGER_SOURCES
 
 add_executable(log_test ${TEST_LOGGER_SOURCES})
 
-target_link_libraries(log_test PUBLIC core)
+target_link_libraries(log_test PUBLIC hnc_core)
 
 set(BENCHMARK_SOURCES
         benchmark.cpp
@@ -14,4 +14,4 @@ set(BENCHMARK_SOURCES
 
 add_executable(log_benchmark ${BENCHMARK_SOURCES})
 
-target_link_libraries(log_benchmark PUBLIC core)
+target_link_libraries(log_benchmark PUBLIC hnc_core)

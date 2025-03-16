@@ -3,6 +3,7 @@
 #include <shared_mutex>
 
 #include "log_thread.h"
+#include "log_common.h"
 
 
 namespace hnc::core::logger::details {

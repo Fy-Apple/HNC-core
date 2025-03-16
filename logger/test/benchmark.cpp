@@ -50,6 +50,8 @@ void test_log_mt_performance() {
 
 
 int main(int argc, char *argv[]) {
+    change_log_file_name("logger/test_log_benchmark");
+
     test_log_mt_performance();
     return 0;
 }

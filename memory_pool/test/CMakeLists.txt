@@ -4,7 +4,7 @@ set(TEST_POOL_SOURCES
 
 add_executable(mp_test ${TEST_POOL_SOURCES})
 
-target_link_libraries(mp_test PUBLIC core pthread)
+target_link_libraries(mp_test PUBLIC hnc_core pthread)
 
 set(BENCHMARK_SOURCES
         benchmark.cpp
@@ -12,4 +12,4 @@ set(BENCHMARK_SOURCES
 
 add_executable(mp_benchmark ${BENCHMARK_SOURCES})
 
-target_link_libraries(mp_benchmark PUBLIC core pthread)
+target_link_libraries(mp_benchmark PUBLIC hnc_core pthread)

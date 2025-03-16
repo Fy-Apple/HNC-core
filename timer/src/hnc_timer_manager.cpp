@@ -22,10 +22,14 @@ HncTimerManager::~HncTimerManager() {
 }
 
 /**
-     * @brief 由于本实例再 构造函数时未初始化this， 需要把this指针传给 timer thread， 所以需要额外辅助函数而不能再构造方法中初始化
-     */
+ * @brief 由于本实例再 构造函数时未初始化this， 需要把this指针传给 timer thread， 所以需要额外辅助函数而不能再构造方法中初始化
+ */
 void HncTimerManager::start(const uint8_t threads) noexcept {
     // 后台线程初始化
+    // TODO : 加一个判断， 避免二次启动
+
+
+
     m_timer_thread_.init(threads, this);
     logger::log_debug("HncTimerManager start!");
 }

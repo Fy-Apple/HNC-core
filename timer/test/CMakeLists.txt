@@ -8,4 +8,4 @@ set(SOURCES
 add_executable(time_test ${SOURCES})
 
 # 如果有外部依赖库的话
-target_link_libraries(time_test PUBLIC core)
+target_link_libraries(time_test PUBLIC hnc_core)

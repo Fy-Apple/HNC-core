@@ -15,6 +15,7 @@ constexpr size_t LARGE_BLOCK = 768 * 1024;  // 768KB  此会走pc  但是走的�
 constexpr int NUM_THREADS = 4;
 constexpr int ALLOC_COUNT = 10000;  // 每个线程分配的次数
 using namespace hnc::core::mem_pool;
+using namespace hnc::core::logger;
 
 //  基础的 malloc 和 tnc_malloc 对比
 void benchmark_alloc_free() {
@@ -100,6 +101,8 @@ void benchmark_vector() {
 }
 
 int main() {
+    change_log_file_name("mem_pool/benchmark");
+
     benchmark_alloc_free();
     benchmark_vector();
     return 0;

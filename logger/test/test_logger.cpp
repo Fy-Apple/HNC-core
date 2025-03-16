@@ -52,6 +52,9 @@ void test_log_st_large() {
 
 
 int main() {
+    change_log_file_name("logger/test_log");
+
+
     test_log_st(); // 6条
     test_log_mt(); // 40 条
     test_log_st_large(); // 5000 条
