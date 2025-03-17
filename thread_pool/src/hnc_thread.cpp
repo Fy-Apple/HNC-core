@@ -6,6 +6,8 @@ namespace hnc::core::thread_pool::details {
 
 HncThread::HncThread(std::function<void(int)> &&func) : m_func_(func), m_threadId_(++m_generateId_){
     // 线程编号从 1 开始
+
+
 }
 
 /**

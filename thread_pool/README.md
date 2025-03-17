@@ -7,9 +7,9 @@
 
 ---
 
-### ** 高性能任务队列**
+### 高性能任务队列
 - **原始实现**：`std::queue<std::function<void()>> + std::mutex`
-- **优化后**：使用 **无锁环形队列（Lock-Free Ring Buffer）**，避免 `std::mutex` 的性能瓶颈，提高任务吞吐量
+- **后续饼**：修改，使用 **无锁环形队列（Lock-Free Ring Buffer）**，避免 `std::mutex` 的性能瓶颈，提高任务吞吐量
 
 ### ** 任务提交**
 - **支持 `std::function<void()>` 类型任务**
@@ -21,15 +21,13 @@
 ## 使用方法
 
 ```c++
-// 创建一个固定线程池，初始线程数 4
-hnc::core::thread_pool::details::HncThreadPool threadPool(TPoolMode::FIXED);
-threadPool.start(4);
+// 创建一个固定线程池
+auto thread_pool = hnc::core::thread_pool::get_fixed_pool(4);
 ```
 
 ```c++
 // 创建一个动态线程池，线程数根据任务负载调整
-hnc::core::thread_pool::details::HncThreadPool dynamicThreadPool(TPoolMode::CACHED);
-dynamicThreadPool.start();
+auto thread_pool = hnc::core::thread_pool::get_cached_pool(4);
 ```
 
 ```c++
@@ -54,11 +52,6 @@ std::cout << "Result: " << result << std::endl;
 ```c++
 // 查看线程池状态
 threadPool.print_status();
-```
-
-```c++
-// 设置任务队列最大任务数
-threadPool.set_task_thresh_hold(1000);  
 ```
 
 

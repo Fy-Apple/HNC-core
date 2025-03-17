@@ -2,7 +2,9 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+
 #include "hnc_thread_pool.h"
+
 using namespace hnc::core::logger;
 using namespace hnc::core::thread_pool;
 
